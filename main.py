@@ -1,4 +1,5 @@
 import pygame
+pygame.font.init()
 from Player import *
 
 class Game:
@@ -9,9 +10,15 @@ class Game:
     self.LINE_WIDTH = 10     # Middle Line Width
     self.WIN = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
     pygame.display.set_caption("Galaxy Fighters")
-    self.Clock = pygame.time.Clock()
-    
+    self.Clock = pygame.time.Clock() # For FPS
 
+    # Bullet Speed
+    self.BULLET_SPEED = 10
+
+    # Set Fonts
+    self.HEALTH_FONT = pygame.font.SysFont('comicsans', 30)
+    self.WINNER_FONT = pygame.font.SysFont('comicsans', 100)
+    
     # Init Players
     self.Player_Width, self.Player_Height = 50, 50
     self.P1 = Player(10, self.HEIGHT / 2 - self.Player_Height / 2)
@@ -26,12 +33,34 @@ class Game:
     self.P1_IMAGE = pygame.transform.rotate(self.P1_IMAGE, 90)
     self.P2_IMAGE = pygame.transform.rotate(self.P2_IMAGE, -90)
 
-  def Check_Close_Window(self):
-    for event in pygame.event.get():
-      if event.type == pygame.QUIT:
-        return False
-    return True
 
+  # ----------------------------------------------- Draw
+  def Render(self):
+    self.WIN.blit(self.BG, (0, 0))  # Put The Background Image
+    pygame.draw.line(self.WIN, "Black", (self.WIDTH/2-(self.LINE_WIDTH/2), 0), (self.WIDTH/2-(self.LINE_WIDTH/2), self.HEIGHT), self.LINE_WIDTH) # Draw The Middle Line
+
+    # Render Players Health
+    P1_Health_Text = self.HEALTH_FONT.render(f"Health: {self.P1.health}", True, "white")
+    P2_Health_Text = self.HEALTH_FONT.render(f"Health: {self.P2.health}", True, "white")
+    self.WIN.blit(P1_Health_Text, (10, 5))
+    self.WIN.blit(P2_Health_Text, (self.WIDTH - P2_Health_Text.get_width() - 10, 5))
+
+    # Render Players According To Them x and y
+    self.WIN.blit(self.P1_IMAGE, (self.P1.x, self.P1.y))
+    self.WIN.blit(self.P2_IMAGE, (self.P2.x, self.P2.y))
+
+    # Render P1 Bullets
+    for bullet in self.P1.fire_list:
+      pygame.draw.rect(self.WIN, "red", bullet)
+    
+    # Render P2 Bullets
+    for bullet in self.P2.fire_list:
+      pygame.draw.rect(self.WIN, "yellow", bullet)
+
+    pygame.display.update()
+
+
+  # ------------------------------------------------ Events And Updates
   def Check_Players_Movement(self):
     keys = pygame.key.get_pressed()
 
@@ -55,19 +84,33 @@ class Game:
     if keys[pygame.K_RIGHT] and self.P2.x < self.WIDTH - self.Player_Width:
       self.P2.Move_Right()
 
-  def Render(self):
-    self.WIN.blit(self.BG, (0, 0))  # Put The Background Image
-    pygame.draw.line(self.WIN, "Black", (self.WIDTH/2-(self.LINE_WIDTH/2), 0), (self.WIDTH/2-(self.LINE_WIDTH/2), self.HEIGHT), self.LINE_WIDTH) # Draw The Middle Line
+  def Check_Close_Window_And_Fire(self): # This Check IF Anybody shoot other player And If User Want to QUIT
+    for event in pygame.event.get():
 
-    # Render Players According To Them x and y
-    self.WIN.blit(self.P1_IMAGE, (self.P1.x, self.P1.y))
-    self.WIN.blit(self.P2_IMAGE, (self.P2.x, self.P2.y))
+      if event.type == pygame.QUIT:
+        return False
 
-    pygame.display.update()
+      if event.type == pygame.KEYDOWN:
+        # IF players 1 clicked on L CTRL
+        if event.key == pygame.K_LCTRL:
+          P1_Bullet = pygame.Rect(self.P1.x + self.Player_Width, self.P1.y + self.Player_Height / 2, 10, 5)
+          self.P1.fire_list.append(P1_Bullet)
+
+        # IF Player 2 Clicked on R Ctrl
+        if event.key == pygame.K_RCTRL:
+          P2_Bullet = pygame.Rect(self.P2.x, self.P2.y + self.Player_Height / 2, 10, 5)
+          self.P2.fire_list.append(P2_Bullet)
+      
+    return True
 
   def Update(self): # This Funtion Will Check For Events
     self.Check_Players_Movement() # For Better View :>
 
+    # Move Each Player Bullet
+    self.P1.Move_Bullets(self.BULLET_SPEED, self.WIDTH) # 1 to move bullet right 
+    self.P2.Move_Bullets(-self.BULLET_SPEED, self.WIDTH) # -1 to move bullet left
+
+  # ------------------------------------------------ Run The Game
 
   def Run(self):
     while True:
@@ -75,8 +118,8 @@ class Game:
       # Set FPS
       self.Clock.tick(60)
 
-      # Check If User Want To Quit
-      run = self.Check_Close_Window()
+      # Check If User Want To Quit ANd it Will Check If Any Player Hass SHoot if yes it will add a regtangle object (bullet) to its fire_List
+      run = self.Check_Close_Window_And_Fire()
       if not run:
         break
 
