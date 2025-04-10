@@ -17,9 +17,6 @@ class Player:
 
   def Move_Down(self):
     self.y += self.player_speed
-  
-  def Take_Damage(self):
-    self.health -= 1
 
   # Bullet_Direction Here Is To determine which player has shoot if left player 1 or -1 if right player, 
   # and Screen_Width is to check if the bullet get out of the screen
