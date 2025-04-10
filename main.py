@@ -1,5 +1,6 @@
 import pygame
 pygame.font.init()
+pygame.mixer.init()
 from Player import *
 
 class Game:
@@ -11,6 +12,9 @@ class Game:
     self.WIN = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
     pygame.display.set_caption("Galaxy Fighters")
     self.Clock = pygame.time.Clock() # For FPS
+
+
+
 
     # Bullet Speed
     self.BULLET_SPEED = 10
@@ -28,10 +32,14 @@ class Game:
     self.BG = pygame.transform.scale(pygame.image.load("Assets/space.png"), (self.WIDTH, self.HEIGHT))
     self.P1_IMAGE = pygame.transform.scale(pygame.image.load("Assets/spaceship_red.png"), (self.Player_Width, self.Player_Height))
     self.P2_IMAGE = pygame.transform.scale(pygame.image.load("Assets/spaceship_yellow.png"), (self.Player_Width, self.Player_Height))
+    self.GUN_SOUND = pygame.mixer.Sound("Assets/Gun+Silencer.mp3")
+    self.GRENADE = pygame.mixer.Sound("Assets/Grenade+1.mp3")
 
     # Rotate Two Images 
     self.P1_IMAGE = pygame.transform.rotate(self.P1_IMAGE, 90)
     self.P2_IMAGE = pygame.transform.rotate(self.P2_IMAGE, -90)
+
+    self.Game_Over = False
 
 
   # ----------------------------------------------- Draw
@@ -58,7 +66,6 @@ class Game:
       pygame.draw.rect(self.WIN, "yellow", bullet)
 
     pygame.display.update()
-
 
   # ------------------------------------------------ Events And Updates
   def Check_Players_Movement(self):
@@ -95,20 +102,61 @@ class Game:
         if event.key == pygame.K_LCTRL:
           P1_Bullet = pygame.Rect(self.P1.x + self.Player_Width, self.P1.y + self.Player_Height / 2, 10, 5)
           self.P1.fire_list.append(P1_Bullet)
+          self.GUN_SOUND.play()
 
         # IF Player 2 Clicked on R Ctrl
-        if event.key == pygame.K_RCTRL:
+        if event.key == pygame.K_RCTRL :
           P2_Bullet = pygame.Rect(self.P2.x, self.P2.y + self.Player_Height / 2, 10, 5)
           self.P2.fire_list.append(P2_Bullet)
-      
+          self.GUN_SOUND.play()
+
+
     return True
 
+  def Check_Hit(self):
+    # Check If P1 is Hitted
+    for P2_Bullet in self.P2.fire_list:
+      if P2_Bullet.x > self.P1.x and P2_Bullet.colliderect(pygame.Rect(self.P1.x, self.P1.y, self.Player_Width, self.Player_Height)):
+        self.P2.fire_list.remove(P2_Bullet)
+        self.P1.health -= 1
+        self.GRENADE.play()
+
+    for P1_Bullet in self.P1.fire_list:
+      if P1_Bullet.x > self.P2.x and P1_Bullet.colliderect(pygame.Rect(self.P2.x, self.P2.y, self.Player_Width, self.Player_Height)):
+        self.P1.fire_list.remove(P1_Bullet)
+        self.P2.health -= 1
+        self.GRENADE.play()
+
+  def Check_Winner(self):
+    if self.P1.health == 0:
+      Yellow_Win_Text = self.WINNER_FONT.render("Yellow Win", True, "white")
+      self.WIN.blit(Yellow_Win_Text, (self.WIDTH / 2 - Yellow_Win_Text.get_width() / 2, self.HEIGHT / 2 - Yellow_Win_Text.get_height() / 2))
+      pygame.display.update()
+      pygame.time.delay(3000)
+      return True
+    
+    elif self.P2.health == 0:
+      Red_Win_Text = self.WINNER_FONT.render("Red Win", True, "white")
+      self.WIN.blit(Red_Win_Text, (self.WIDTH / 2 - Red_Win_Text.get_width() / 2, self.HEIGHT / 2 - Red_Win_Text.get_height() / 2))
+      pygame.display.update()
+      pygame.time.delay(3000)
+      return True
+    
+    else:
+      return False
+    
   def Update(self): # This Funtion Will Check For Events
     self.Check_Players_Movement() # For Better View :>
 
     # Move Each Player Bullet
     self.P1.Move_Bullets(self.BULLET_SPEED, self.WIDTH) # 1 to move bullet right 
     self.P2.Move_Bullets(-self.BULLET_SPEED, self.WIDTH) # -1 to move bullet left
+
+    # Check If Any Player Has Hitted
+    self.Check_Hit()
+
+    if self.Check_Winner():
+      self.Game_Over = True
 
   # ------------------------------------------------ Run The Game
 
@@ -126,6 +174,8 @@ class Game:
       self.Update() # For Events 
       self.Render() 
 
+      if self.Game_Over:
+        break
 
     pygame.quit()
 
